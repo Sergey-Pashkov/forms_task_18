@@ -1,0 +1,355 @@
+{% extends 'forms_app/base.html' %}
+
+{% block title %}Мои сообщения - Forms App{% endblock %}
+
+{% block meta_description %}
+Просмотр всех отправленных сообщений с возможностью поиска и фильтрации
+{% endblock %}
+
+{% block content %}
+<!-- Заголовок страницы -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">
+            <i class="bi bi-chat-dots me-2"></i>
+            Мои сообщения
+        </h1>
+        <p class="text-muted mb-0">
+            Всего сообщений: {{ total_messages }}
+        </p>
+    </div>
+    <div>
+        <a href="{% url 'contact' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>
+            Новое сообщение
+        </a>
+    </div>
+</div>
+
+<!-- Форма поиска и фильтрации -->
+<div class="search-form mb-4">
+    <form method="get" class="row g-3">
+        <!-- Поиск -->
+        <div class="col-md-6">
+            <label for="search" class="form-label">Поиск</label>
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" 
+                       class="form-control" 
+                       id="search" 
+                       name="search" 
+                       value="{{ search_query }}"
+                       placeholder="Поиск по тексту, имени или email...">
+            </div>
+        </div>
+        
+        <!-- Сортировка -->
+        <div class="col-md-3">
+            <label for="sort" class="form-label">Сортировка</label>
+            <select class="form-select" id="sort" name="sort">
+                <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>
+                    Сначала новые
+                </option>
+                <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>
+                    Сначала старые
+                </option>
+                <option value="name" {% if sort_by == 'name' %}selected{% endif %}>
+                    По имени (А-Я)
+                </option>
+                <option value="email" {% if sort_by == 'email' %}selected{% endif %}>
+                    По email (А-Я)
+                </option>
+            </select>
+        </div>
+        
+        <!-- Кнопки -->
+        <div class="col-md-3 d-flex align-items-end gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1">
+                <i class="bi bi-funnel me-1"></i>
+                Применить
+            </button>
+            <a href="{% url 'messages_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-clockwise"></i>
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Список сообщений -->
+{% if messages %}
+    <div class="row">
+        {% for message in messages %}
+        <div class="col-12 mb-3">
+            <div class="message-item {% if not message.is_read %}unread{% endif %}">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                            {% if not message.is_read %}
+                                <span class="badge bg-warning text-dark me-2">Новое</span>
+                            {% endif %}
+                            Сообщение #{{ message.id }}
+                        </h6>
+                        <div class="text-muted small">
+                            <i class="bi bi-person me-1"></i>{{ message.name }}
+                            <i class="bi bi-envelope ms-3 me-1"></i>{{ message.email }}
+                            <i class="bi bi-calendar ms-3 me-1"></i>{{ message.created_at|date:"d.m.Y H:i" }}
+                            {% if message.ip_address %}
+                                <i class="bi bi-globe ms-3 me-1"></i>{{ message.ip_address }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        {% if message.is_read %}
+                            <span class="badge bg-success">Прочитано</span>
+                        {% else %}
+                            <span class="badge bg-warning">Новое</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Превью текста -->
+                <div class="mb-3">
+                    <p class="mb-2">{{ message.get_short_message }}</p>
+                    
+                    <!-- Кнопка развернуть/свернуть -->
+                    {% if message.message_text|length > 50 %}
+                    <button class="btn btn-link btn-sm p-0 text-decoration-none" 
+                            type="button" 
+                            data-bs-toggle="collapse" 
+                            data-bs-target="#fullMessage{{ message.id }}"
+                            aria-expanded="false">
+                        <i class="bi bi-chevron-down me-1"></i>
+                        <span class="toggle-text">Показать полностью</span>
+                    </button>
+                    
+                    <div class="collapse mt-2" id="fullMessage{{ message.id }}">
+                        <div class="card card-body bg-light border-0">
+                            {{ message.message_text|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Действия -->
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" 
+                            data-message-text="{{ message.message_text }}"
+                            onclick="copyMessage(this)">
+                        <i class="bi bi-clipboard me-1"></i>
+                        Копировать
+                    </button>
+                    
+                    <button class="btn btn-sm btn-outline-info" 
+                            data-message-id="{{ message.id }}"
+                            onclick="shareMessage(this.dataset.messageId)">
+                        <i class="bi bi-share me-1"></i>
+                        Поделиться
+                    </button>
+                    
+                    {% if user.is_superuser %}
+                    <button class="btn btn-sm btn-outline-{% if message.is_read %}warning{% else %}success{% endif %}" 
+                            data-message-id="{{ message.id }}"
+                            data-is-read="{% if message.is_read %}true{% else %}false{% endif %}"
+                            onclick="toggleReadStatus(this.dataset.messageId, this.dataset.isRead === 'true')">
+                        <i class="bi bi-{% if message.is_read %}eye-slash{% else %}eye{% endif %} me-1"></i>
+                        {% if message.is_read %}Отметить непрочитанным{% else %}Отметить прочитанным{% endif %}
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Пагинация -->
+    {% if messages.has_other_pages %}
+    <nav aria-label="Навигация по сообщениям" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if messages.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ messages.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            {% endif %}
+            
+            {% for num in messages.paginator.page_range %}
+                {% if messages.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > messages.number|add:'-3' and num < messages.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if messages.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ messages.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ messages.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    
+    <!-- Информация о пагинации -->
+    <div class="text-center text-muted small">
+        Показано {{ messages.start_index }}–{{ messages.end_index }} из {{ messages.paginator.count }} сообщений
+    </div>
+    {% endif %}
+    
+{% else %}
+    <!-- Пустое состояние -->
+    <div class="empty-state">
+        <i class="bi bi-inbox"></i>
+        <h4>Сообщения не найдены</h4>
+        {% if search_query %}
+            <p>По запросу "{{ search_query }}" ничего не найдено.</p>
+            <a href="{% url 'messages_list' %}" class="btn btn-outline-secondary">
+                Показать все сообщения
+            </a>
+        {% else %}
+            <p>Вы еще не отправляли сообщения.</p>
+            <a href="{% url 'contact' %}" class="btn btn-primary">
+                Отправить первое сообщение
+            </a>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Функция копирования в буфер обмена
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        showNotification('success', 'Текст скопирован в буфер обмена');
+    }).catch(function() {
+        // Fallback для старых браузеров
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showNotification('success', 'Текст скопирован в буфер обмена');
+        } catch (err) {
+            showNotification('error', 'Не удалось скопировать текст');
+        }
+        document.body.removeChild(textArea);
+    });
+}
+
+// Функция копирования сообщения из кнопки
+function copyMessage(button) {
+    const messageText = button.dataset.messageText;
+    copyToClipboard(messageText);
+}
+
+// Функция поделиться сообщением
+function shareMessage(messageId) {
+    const messageElement = document.querySelector(`#fullMessage${messageId}`);
+    const messageText = messageElement ? messageElement.textContent.trim() : 'Сообщение';
+    
+    if (navigator.share) {
+        navigator.share({
+            title: `Сообщение #${messageId}`,
+            text: messageText
+        });
+    } else {
+        // Fallback - копирование в буфер обмена
+        copyToClipboard(messageText);
+    }
+}
+
+// Переключение статуса прочитанности (только для администраторов)
+function toggleReadStatus(messageId, currentStatus) {
+    if (confirm('Изменить статус прочитанности сообщения?')) {
+        // Здесь можно добавить Ajax запрос для изменения статуса
+        showNotification('info', 'Функция будет реализована в следующей версии');
+    }
+}
+
+// Показ уведомлений
+function showNotification(type, message) {
+    const alertTypes = {
+        'success': 'success',
+        'error': 'danger',
+        'info': 'info',
+        'warning': 'warning'
+    };
+    
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${alertTypes[type]} alert-dismissible fade show position-fixed`;
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    // Автоматическое удаление через 3 секунды
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 3000);
+}
+
+// Обработка кнопок развернуть/свернуть
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleButtons = document.querySelectorAll('[data-bs-toggle="collapse"]');
+    
+    toggleButtons.forEach(button => {
+        const target = document.querySelector(button.getAttribute('data-bs-target'));
+        const toggleText = button.querySelector('.toggle-text');
+        const icon = button.querySelector('i');
+        
+        target.addEventListener('show.bs.collapse', function() {
+            toggleText.textContent = 'Свернуть';
+            icon.className = 'bi bi-chevron-up me-1';
+        });
+        
+        target.addEventListener('hide.bs.collapse', function() {
+            toggleText.textContent = 'Показать полностью';
+            icon.className = 'bi bi-chevron-down me-1';
+        });
+    });
+    
+    // Автоматическая отправка формы при изменении сортировки
+    const sortSelect = document.getElementById('sort');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+            this.form.submit();
+        });
+    }
+    
+    // Очистка поиска по Escape
+    const searchInput = document.getElementById('search');
+    if (searchInput) {
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                this.value = '';
+                this.form.submit();
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

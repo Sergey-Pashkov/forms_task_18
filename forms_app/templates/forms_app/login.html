@@ -1,0 +1,206 @@
+{% extends 'forms_app/base.html' %}
+
+{% block title %}Войти - Forms App{% endblock %}
+
+{% block meta_description %}
+Войдите в свой аккаунт Forms App для доступа к личному кабинету
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-5 col-md-7">
+        <!-- Заголовок страницы -->
+        <div class="text-center mb-4">
+            <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                 style="width: 80px; height: 80px;">
+                <i class="bi bi-box-arrow-in-right fs-2"></i>
+            </div>
+            <h1 class="h3 mb-2">Добро пожаловать!</h1>
+            <p class="text-muted">
+                Войдите в свой аккаунт, чтобы продолжить работу с Forms App.
+            </p>
+        </div>
+
+        <!-- Форма авторизации -->
+        <div class="card shadow border-0">
+            <div class="card-body p-4">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Имя пользователя или Email -->
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">
+                            {{ form.username.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.username }}
+                        {% if form.username.help_text %}
+                            <div class="form-text">{{ form.username.help_text }}</div>
+                        {% endif %}
+                        {% if form.username.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.username.errors %}
+                                    {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Пароль -->
+                    <div class="mb-3">
+                        <label for="{{ form.password.id_for_label }}" class="form-label">
+                            {{ form.password.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            {{ form.password }}
+                            <button type="button" class="btn btn-outline-secondary" id="togglePassword">
+                                <i class="bi bi-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                        {% if form.password.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.password.errors %}
+                                    {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Запомнить меня -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.remember_me }}
+                            <label class="form-check-label" for="{{ form.remember_me.id_for_label }}">
+                                {{ form.remember_me.label }}
+                            </label>
+                            {% if form.remember_me.help_text %}
+                                <div class="form-text">{{ form.remember_me.help_text }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Общие ошибки формы -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Кнопка входа -->
+                    <div class="d-grid gap-2 mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>
+                            Войти в систему
+                        </button>
+                    </div>
+                    
+                    <!-- Дополнительные ссылки -->
+                    <div class="text-center">
+                        <small class="text-muted">
+                            Забыли пароль? 
+                            <a href="#" class="text-decoration-none" onclick="alert('Функция восстановления пароля будет добавлена позже')">
+                                Восстановить
+                            </a>
+                        </small>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Ссылка на регистрацию -->
+        <div class="text-center mt-4">
+            <div class="card border-0 bg-light">
+                <div class="card-body py-3">
+                    <p class="mb-2 text-muted">
+                        Нет аккаунта?
+                    </p>
+                    <a href="{% url 'register' %}" class="btn btn-outline-success">
+                        <i class="bi bi-person-plus me-2"></i>
+                        Создать аккаунт
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Демо доступ -->
+        <div class="text-center mt-3">
+            <div class="alert alert-info">
+                <small>
+                    <i class="bi bi-info-circle me-1"></i>
+                    <strong>Демо доступ:</strong> admin / admin
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Показать/скрыть пароль
+document.addEventListener('DOMContentLoaded', function() {
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('{{ form.password.id_for_label }}');
+    const toggleIcon = document.getElementById('toggleIcon');
+    
+    if (togglePassword && passwordInput && toggleIcon) {
+        togglePassword.addEventListener('click', function() {
+            // Переключаем тип поля
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Меняем иконку
+            if (type === 'text') {
+                toggleIcon.classList.remove('bi-eye');
+                toggleIcon.classList.add('bi-eye-slash');
+            } else {
+                toggleIcon.classList.remove('bi-eye-slash');
+                toggleIcon.classList.add('bi-eye');
+            }
+        });
+    }
+    
+    // Автофокус на первое поле
+    const usernameInput = document.getElementById('{{ form.username.id_for_label }}');
+    if (usernameInput && !usernameInput.value) {
+        usernameInput.focus();
+    }
+    
+    // Валидация формы перед отправкой
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const username = document.getElementById('{{ form.username.id_for_label }}').value.trim();
+        const password = document.getElementById('{{ form.password.id_for_label }}').value;
+        
+        if (!username) {
+            e.preventDefault();
+            alert('Пожалуйста, введите имя пользователя или email');
+            return false;
+        }
+        
+        if (!password) {
+            e.preventDefault();
+            alert('Пожалуйста, введите пароль');
+            return false;
+        }
+        
+        // Показываем индикатор загрузки
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Вход...';
+        
+        // Если форма не прошла серверную валидацию, восстанавливаем кнопку
+        setTimeout(() => {
+            if (submitBtn.disabled) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }, 5000);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,275 @@
+{% extends 'forms_app/base.html' %}
+
+{% block title %}Связаться с нами - Forms App{% endblock %}
+
+{% block meta_description %}
+Отправьте нам сообщение через удобную форму обратной связи
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <!-- Заголовок страницы -->
+        <div class="text-center mb-5">
+            <div class="bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                 style="width: 80px; height: 80px;">
+                <i class="bi bi-envelope fs-2"></i>
+            </div>
+            <h1 class="h3 mb-3">Связаться с нами</h1>
+            <p class="text-muted lead">
+                Есть вопросы или предложения? Мы будем рады получить ваше сообщение!
+            </p>
+        </div>
+
+        <!-- Форма сообщения -->
+        <div class="card shadow border-0">
+            <div class="card-body p-4">
+                <form method="post" class="ajax-form" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- Имя -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                {{ form.name.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.help_text %}
+                                <div class="form-text">{{ form.name.help_text }}</div>
+                            {% endif %}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.name.errors %}
+                                        {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Email -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">
+                                {{ form.email.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.email }}
+                            {% if form.email.help_text %}
+                                <div class="form-text">{{ form.email.help_text }}</div>
+                            {% endif %}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.email.errors %}
+                                        {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Сообщение -->
+                    <div class="mb-4">
+                        <label for="{{ form.message_text.id_for_label }}" class="form-label">
+                            {{ form.message_text.label }}
+                            <span class="text-danger">*</span>
+                        </label>
+                        {{ form.message_text }}
+                        {% if form.message_text.help_text %}
+                            <div class="form-text">{{ form.message_text.help_text }}</div>
+                        {% endif %}
+                        {% if form.message_text.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.message_text.errors %}
+                                    {{ error }}{% if not forloop.last %}<br>{% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Общие ошибки формы -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Кнопки отправки -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                        <button type="submit" class="btn btn-info btn-lg text-white">
+                            <i class="bi bi-send me-2"></i>
+                            Отправить сообщение
+                        </button>
+                        
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearForm()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>
+                            Очистить форму
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Дополнительная информация -->
+        <div class="row mt-5">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 border-0 bg-light">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-clock text-primary display-6 mb-3"></i>
+                        <h5>Время ответа</h5>
+                        <p class="text-muted mb-0">
+                            Мы стараемся отвечать на все сообщения в течение 24 часов.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 border-0 bg-light">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-shield-check text-success display-6 mb-3"></i>
+                        <h5>Конфиденциальность</h5>
+                        <p class="text-muted mb-0">
+                            Ваши данные защищены и не передаются третьим лицам.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Информация для авторизованных пользователей -->
+        {% if user.is_authenticated %}
+        <div class="alert alert-info mt-4">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>{{ user.first_name|default:user.username }},</strong> 
+            ваши сообщения сохраняются в личном кабинете. 
+            <a href="{% url 'messages_list' %}" class="alert-link">
+                Посмотреть все сообщения
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Функция очистки формы
+function clearForm() {
+    if (confirm('Вы уверены, что хотите очистить форму?')) {
+        const form = document.querySelector('form');
+        form.reset();
+        
+        // Очищаем ошибки валидации
+        const invalidFields = form.querySelectorAll('.is-invalid');
+        invalidFields.forEach(field => field.classList.remove('is-invalid'));
+        
+        const errorMessages = form.querySelectorAll('.invalid-feedback');
+        errorMessages.forEach(message => message.remove());
+        
+        // Фокус на первое поле
+        const firstField = form.querySelector('input, textarea');
+        if (firstField) {
+            firstField.focus();
+        }
+    }
+}
+
+// Дополнительная функциональность для формы контактов
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.ajax-form');
+    const messageField = document.getElementById('{{ form.message_text.id_for_label }}');
+    
+    // Автосохранение черновика в localStorage
+    function saveDraft() {
+        const formData = {
+            name: document.getElementById('{{ form.name.id_for_label }}').value,
+            email: document.getElementById('{{ form.email.id_for_label }}').value,
+            message: messageField.value
+        };
+        localStorage.setItem('contact_form_draft', JSON.stringify(formData));
+    }
+    
+    // Восстановление черновика
+    function loadDraft() {
+        const draft = localStorage.getItem('contact_form_draft');
+        if (draft) {
+            try {
+                const formData = JSON.parse(draft);
+                if (formData.name) document.getElementById('{{ form.name.id_for_label }}').value = formData.name;
+                if (formData.email) document.getElementById('{{ form.email.id_for_label }}').value = formData.email;
+                if (formData.message) messageField.value = formData.message;
+                
+                // Показываем уведомление о восстановлении
+                if (formData.name || formData.email || formData.message) {
+                    showNotification('info', 'Восстановлен сохраненный черновик');
+                }
+            } catch (e) {
+                console.log('Ошибка при восстановлении черновика:', e);
+            }
+        }
+    }
+    
+    // Очистка черновика после успешной отправки
+    function clearDraft() {
+        localStorage.removeItem('contact_form_draft');
+    }
+    
+    // Автосохранение при вводе
+    const formInputs = form.querySelectorAll('input, textarea');
+    formInputs.forEach(input => {
+        input.addEventListener('input', saveDraft);
+    });
+    
+    // Загружаем черновик при загрузке страницы
+    loadDraft();
+    
+    // Очищаем черновик при успешной отправке
+    form.addEventListener('submit', function() {
+        // Слушаем успешную отправку через кастомное событие
+        document.addEventListener('formSubmitSuccess', clearDraft, { once: true });
+    });
+    
+    // Подсчет слов в сообщении
+    if (messageField) {
+        const wordCountDiv = document.createElement('div');
+        wordCountDiv.className = 'text-muted small mt-1';
+        messageField.parentNode.appendChild(wordCountDiv);
+        
+        function updateWordCount() {
+            const text = messageField.value.trim();
+            const words = text ? text.split(/\s+/).length : 0;
+            const characters = text.length;
+            
+            wordCountDiv.innerHTML = `
+                <i class="bi bi-text-paragraph me-1"></i>
+                Слов: ${words} | Символов: ${characters}/500
+            `;
+        }
+        
+        messageField.addEventListener('input', updateWordCount);
+        updateWordCount(); // Инициализация
+    }
+    
+    // Функция показа уведомлений
+    function showNotification(type, message) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const container = document.querySelector('.container');
+        container.insertBefore(alert, container.firstChild);
+        
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.remove();
+            }
+        }, 3000);
+    }
+});
+</script>
+{% endblock %}
